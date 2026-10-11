@@ -25,12 +25,6 @@ multi-user accounts, and scoped agent tokens are not part of this release.
 
 ## Run locally
 
-The workbench uses the [Shadcn Admin](https://github.com/satnaing/shadcn-admin)
-sidebar, theme, and UI primitives, adapted for Arvlet's artifact library and
-editor. Its MIT license is retained in `web/SHADCN-ADMIN-LICENSE`. The library
-uses a table view, the sidebar collapses on desktop and opens as a drawer on
-mobile, and the header switches between light and dark themes.
-
 Requirements: Docker with Compose. Node.js 24 is used by the setup and demo scripts;
 the deployed application has no Node or Python runtime dependency.
 
