@@ -1,0 +1,15 @@
+{
+  "name": "arvlet-tooling",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "api:generate": "node scripts/generate-openapi.mjs && openapi-typescript internal/server/openapi.json -o web/src/schema.ts && prettier --write internal/server/openapi.json web/src/schema.ts",
+    "test:bridge": "node --test scripts/bridge.test.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.0",
+    "openapi-typescript": "^7.10.0"
+  }
+}

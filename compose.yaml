@@ -1,0 +1,43 @@
+name: arvlet
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    stop_grace_period: 15s
+    environment:
+      ARVLET_API_KEY: ${ARVLET_API_KEY:?Run node scripts/setup.mjs first}
+      ARVLET_PASSWORD: ${ARVLET_PASSWORD:?Run node scripts/setup.mjs first}
+      ARVLET_SESSION_SECRET: ${ARVLET_SESSION_SECRET:?Run node scripts/setup.mjs first}
+      ARVLET_ORIGIN: ${ARVLET_ORIGIN:-http://localhost:3090}
+    volumes:
+      - arvlet_data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: [CMD, arvlet, healthcheck]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${ARVLET_BIND:-127.0.0.1}:${ARVLET_HTTP_PORT:-3090}:80"
+      - "${ARVLET_BIND:-127.0.0.1}:${ARVLET_HTTPS_PORT:-3443}:443"
+    environment:
+      ARVLET_SITE: ${ARVLET_SITE:-http://localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  arvlet_data:
+  caddy_data:
+  caddy_config:

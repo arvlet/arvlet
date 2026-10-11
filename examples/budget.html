@@ -1,0 +1,131 @@
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>月度预算</title>
+    <style>
+      body {
+        font:
+          15px/1.7 system-ui,
+          sans-serif;
+        color: #293e32;
+        background: #fbfaf5;
+        margin: 0;
+        padding: 38px;
+      }
+      main {
+        max-width: 580px;
+        margin: auto;
+      }
+      small {
+        color: #83917e;
+        letter-spacing: 2px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 8px 0 30px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 18px 0;
+        border-bottom: 1px solid #deded3;
+        padding-bottom: 16px;
+        gap: 20px;
+      }
+      input {
+        width: 140px;
+        border: 1px solid #d5d9cc;
+        border-radius: 6px;
+        background: white;
+        padding: 10px;
+        font: inherit;
+      }
+      output {
+        display: block;
+        font:
+          44px Georgia,
+          serif;
+        margin: 16px 0 28px;
+      }
+      button {
+        background: #315d48;
+        color: white;
+        border: 0;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      p {
+        color: #75806e;
+        font-size: 12px;
+      }
+      #status {
+        min-height: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <small>PERSONAL FINANCE / DEMO</small>
+      <h1>为生活，留一点余地。</h1>
+      <label
+        >月度预算<input id="budget" type="number" min="0" value="8000"
+      /></label>
+      <label
+        >已用金额<input id="spent" type="number" min="0" value="3250"
+      /></label>
+      <p>本月可用</p>
+      <output id="remaining">¥ 4,750</output>
+      <button id="save" disabled>保存预算</button>
+      <p id="status" role="status">正在读取服务端数据…</p>
+      <p>这是一份示例数据。修改金额可即时计算，点击保存后才会写入服务端。</p>
+    </main>
+    <script>
+      const budget = document.getElementById("budget");
+      const spent = document.getElementById("spent");
+      const status = document.getElementById("status");
+      const save = document.getElementById("save");
+      let revision = 0;
+      function calculate() {
+        document.getElementById("remaining").textContent =
+          "¥ " +
+          (Number(budget.value) - Number(spent.value)).toLocaleString("zh-CN");
+      }
+      budget.addEventListener("input", calculate);
+      spent.addEventListener("input", calculate);
+      window.arvlet
+        .getState()
+        .then((state) => {
+          revision = state.revision;
+          if (typeof state.data.budget === "number")
+            budget.value = state.data.budget;
+          if (typeof state.data.spent === "number")
+            spent.value = state.data.spent;
+          calculate();
+          save.disabled = false;
+          status.textContent =
+            "已读取数据 r" + revision + "。保存前请在上方允许此产物保存数据。";
+        })
+        .catch((error) => {
+          status.textContent = error.message;
+        });
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        try {
+          const state = await window.arvlet.setState(
+            { budget: Number(budget.value), spent: Number(spent.value) },
+            revision,
+          );
+          revision = state.revision;
+          status.textContent = "已保存到服务端 · r" + revision;
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          save.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

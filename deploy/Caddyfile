@@ -1,0 +1,4 @@
+{$ARVLET_SITE:http://localhost} {
+    encode zstd gzip
+    reverse_proxy app:8090
+}

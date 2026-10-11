@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+.venv
+node_modules
+web/node_modules
+web/dist
+data
+*.exe
+test-results
