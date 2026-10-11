@@ -65,3 +65,18 @@ checks the exact configured Origin on writes. HTTPS sets Secure cookies.
 Login attempts are globally limited in-process; this is not multi-tenant auth.
 Changing the password or session secret invalidates sessions. Per-agent scoped
 tokens, account management, and durable abuse controls are future work.
+
+## Standalone shares
+
+Schema v2 adds revocable share grants for HTML artifacts. A random 256-bit path
+token maps to one artifact and a pinned content version; lookups use its SHA-256
+hash. The standalone host bridges only state reads and writes, without workspace
+cookies. It preserves state revision checks and strips public idempotency keys to
+keep them out of the workspace retry namespace. Share creation supports workspace
+idempotency; revocation and public state writes do not.
+
+The separate Caddy share listener serves `/s/*` and `/share.js` only. Its default
+bind is loopback; operators can bind it to a LAN address without exposing the
+workbench. Sharing has no accounts, per-recipient attribution, or edit history for
+state. Revocation blocks subsequent requests; it cannot recall data already read
+or cancel a write that was already authorized and is in flight.

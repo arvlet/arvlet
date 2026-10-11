@@ -44,10 +44,10 @@ test("saving freezes the submitted draft and applies the response without a foll
   );
   const changed = vi.fn();
   render(<Editor artifact={artifact} onChanged={changed} onClose={vi.fn()} />);
-  fireEvent.click(screen.getByRole("button", { name: "编辑内容" }));
-  const editor = await screen.findByLabelText("产物源代码");
+  fireEvent.click(screen.getByRole("button", { name: "Edit content" }));
+  const editor = await screen.findByLabelText("Artifact source");
   fireEvent.change(editor, { target: { value: "edited" } });
-  fireEvent.click(screen.getByRole("button", { name: "保存为新版本" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save new version" }));
   expect((editor as HTMLTextAreaElement).disabled).toBe(true);
   await act(async () =>
     finish({ ...artifact, revision: 2, updated_at: "later" }),
@@ -69,10 +69,10 @@ test("a conflicting save retains the draft and does not update parent metadata",
   vi.mocked(api).mockRejectedValueOnce(new Error("Revision conflict"));
   const changed = vi.fn();
   render(<Editor artifact={artifact} onChanged={changed} onClose={vi.fn()} />);
-  fireEvent.click(screen.getByRole("button", { name: "编辑内容" }));
-  const editor = await screen.findByLabelText("产物源代码");
+  fireEvent.click(screen.getByRole("button", { name: "Edit content" }));
+  const editor = await screen.findByLabelText("Artifact source");
   fireEvent.change(editor, { target: { value: "keep this draft" } });
-  fireEvent.click(screen.getByRole("button", { name: "保存为新版本" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save new version" }));
   await screen.findByRole("alert");
   expect((editor as HTMLTextAreaElement).value).toBe("keep this draft");
   expect(changed).not.toHaveBeenCalled();
@@ -83,11 +83,14 @@ test("unsaved record text triggers a close confirmation", async () => {
   const close = vi.fn();
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   render(<Editor artifact={artifact} onChanged={vi.fn()} onClose={close} />);
-  fireEvent.click(screen.getByRole("button", { name: "相关记录" }));
-  fireEvent.change(await screen.findByLabelText("为这个产物留一条记录"), {
-    target: { value: "unsubmitted record" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "← 产物库" }));
+  fireEvent.click(screen.getByRole("button", { name: "Related entries" }));
+  fireEvent.change(
+    await screen.findByLabelText("Add an entry for this artifact"),
+    {
+      target: { value: "unsubmitted record" },
+    },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "← Artifacts" }));
   expect(confirm).toHaveBeenCalled();
   expect(close).not.toHaveBeenCalled();
 });
@@ -102,10 +105,10 @@ test("creation opens the committed artifact with no second network dependency", 
   vi.mocked(api).mockResolvedValue(artifact);
   const created = vi.fn();
   render(<CreateDialog onClose={vi.fn()} onCreated={created} />);
-  fireEvent.change(screen.getByPlaceholderText("给这个成果一个名字"), {
+  fireEvent.change(screen.getByPlaceholderText("Give this artifact a name"), {
     target: { value: "Notes" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "创建产物" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create artifact" }));
   await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
   expect(api).toHaveBeenCalledTimes(1);
   expect(created).toHaveBeenCalledWith(

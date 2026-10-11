@@ -11,6 +11,15 @@ submission are disabled. Iframe self-navigation is not a reliable network contai
 boundary. Only run artifact source trusted with its own data. CPU and memory usage
 are not bounded by this sandbox.
 
+Editable share URLs are bearer capabilities: anyone with the complete URL can
+read and replace that artifact's app data. They do not provide workspace access.
+Shares pin HTML code at creation, have no automatic expiry, and can be revoked
+through the authenticated shares API. Do not put private edit URLs in screenshots,
+public issues, or logs. Database backups may contain share URLs in stored
+idempotency responses as well as hashed share lookups; protect the entire backup.
+The optional LAN listener exposes only share routes. Use it only on a trusted
+network; HTTP does not encrypt content or edit links in transit.
+
 Please use GitHub's private vulnerability reporting feature if enabled on the
 repository. If unavailable, open an issue requesting a private contact without
 including exploit details, credentials, or private data. There is no promised

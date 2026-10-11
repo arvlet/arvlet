@@ -1,7 +1,7 @@
+/* Compatibility aliases for existing artifact preview/editor views. */
 :root {
-  --paper: #f7f7f2;
-  --ink: #28362d;
-  --muted: #7a8276;
-  --green: #315d48;
-  --line: #dedfd5;
+  --paper: var(--background);
+  --ink: var(--foreground);
+  --green: var(--primary);
+  --line: var(--border);
 }

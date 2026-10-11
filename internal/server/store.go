@@ -84,7 +84,7 @@ func openDB(path string) (*sql.DB, error) {
 		db.Close()
 		return nil, err
 	}
-	if version > 1 {
+	if version > 2 {
 		db.Close()
 		return nil, errors.New("database schema is newer than this application")
 	}
@@ -109,6 +109,13 @@ PRAGMA user_version=1;`)
 			return nil, err
 		}
 		if err = tx.Commit(); err != nil {
+			db.Close()
+			return nil, err
+		}
+	}
+	if version < 2 {
+		_, err = db.Exec(`BEGIN; CREATE TABLE shares(token_hash TEXT PRIMARY KEY,artifact_id TEXT NOT NULL REFERENCES artifacts(id),version INTEGER NOT NULL,created_at TEXT NOT NULL); PRAGMA user_version=2; COMMIT;`)
+		if err != nil {
 			db.Close()
 			return nil, err
 		}

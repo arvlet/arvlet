@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>表格台账</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f7f8f5;
+      color: #243c32;
+      font:
+        14px/1.5 system-ui,
+        sans-serif;
+    }
+    main {
+      padding: 40px 28px;
+      max-width: 1500px;
+      margin: auto;
+    }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #7b8c81;
+    }
+    h1 {
+      font-size: 30px;
+      letter-spacing: -1px;
+      margin: 12px 0 8px;
+    }
+    p {
+      color: #728077;
+      margin: 0;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 28px 0 16px;
+    }
+    button {
+      font: inherit;
+      padding: 9px 15px;
+      background: white;
+      border: 1px solid #d6dfd7;
+      border-radius: 7px;
+      color: inherit;
+      cursor: pointer;
+    }
+    button.primary {
+      background: #285b43;
+      color: white;
+      border-color: #285b43;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    #count {
+      margin-left: auto;
+      color: #748378;
+      font-size: 12px;
+    }
+    .sheet {
+      overflow: auto;
+      background: white;
+      border: 1px solid #d6dfd7;
+      border-radius: 10px;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      min-width: 1000px;
+      table-layout: fixed;
+    }
+    th {
+      background: #edf1eb;
+      color: #687e6d;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 12px;
+      border-bottom: 1px solid #d6dfd7;
+    }
+    th:first-child {
+      width: 48px;
+      text-align: center;
+    }
+    th:nth-child(2) {
+      width: 150px;
+    }
+    th:nth-child(3) {
+      width: 130px;
+    }
+    th:nth-child(4) {
+      width: 220px;
+    }
+    th:nth-child(5) {
+      width: 130px;
+    }
+    th:nth-child(7) {
+      width: 180px;
+    }
+    td {
+      padding: 0;
+      border-bottom: 1px solid #e8ece6;
+      border-right: 1px solid #e8ece6;
+      height: 49px;
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    td:first-child {
+      text-align: center;
+      background: #fafbf8;
+      color: #8a958b;
+    }
+    td:focus-within {
+      outline: 2px solid #458462;
+      outline-offset: -2px;
+      background: #f4faf4;
+    }
+    td input.cell {
+      font: inherit;
+      color: inherit;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      width: 100%;
+      height: 49px;
+      padding: 12px;
+    }
+    td input.cell:disabled {
+      color: #788478;
+    }
+    input[type="checkbox"] {
+      accent-color: #285b43;
+    }
+    #status {
+      min-height: 24px;
+      margin: 14px 0;
+      font-size: 13px;
+      color: #607c67;
+    }
+    #status.error {
+      color: #a23c32;
+    }
+    footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #8b958c;
+    }
+    .hint {
+      font-size: 12px;
+      margin-left: 8px;
+      color: #8b958c;
+    }
+    @media (max-width: 600px) {
+      main {
+        padding: 24px 16px;
+      }
+      .hint {
+        width: 100%;
+        margin-left: 0;
+      }
+      #count {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+  </style>
+  <main>
+    <div class="eyebrow">ARVLET / TABLE</div>
+    <h1>表格台账</h1>
+    <p>点进单元格就能修改，把记录留在一张表里。</p>
+    <div class="toolbar">
+      <button id="add" disabled>＋ 新增行</button
+      ><button id="remove" disabled>删除选中行</button
+      ><button id="undo" disabled>撤销未保存修改</button
+      ><button id="save" class="primary" disabled>保存修改</button
+      ><span id="count"></span>
+    </div>
+    <div class="sheet">
+      <table aria-label="可编辑台账">
+        <thead>
+          <tr>
+            <th><input id="all" type="checkbox" aria-label="选择全部行" /></th>
+            <th>日期</th>
+            <th>记录人 / Agent</th>
+            <th>事项</th>
+            <th>分类</th>
+            <th>内容 / 结果</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="status" role="status" aria-live="polite">正在加载服务端数据…</div>
+    <p class="hint">
+      单击编辑 · Tab 切换单元格 · Enter 移至下一行 · 修改后点击「保存修改」
+    </p>
+    <footer>
+      同一链接共享同一份数据。多人同时保存发生冲突时，会保留你的草稿。
+    </footer>
+  </main>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const columns = [
+        "date",
+        "agent",
+        "subject",
+        "category",
+        "result",
+        "note",
+      ];
+      const labels = ["日期", "记录人", "事项", "分类", "内容", "备注"];
+      let snapshot,
+        rows = [],
+        revision = 0,
+        busy = true,
+        dirty = false;
+      const selected = new Set();
+      const uid = () =>
+        Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+          b.toString(16).padStart(2, "0"),
+        ).join("");
+      const notice = (text, error = false) => {
+        $("status").textContent = text;
+        $("status").className = error ? "error" : "";
+      };
+      function controls() {
+        $("save").disabled = busy || !dirty;
+        $("add").disabled = busy || !snapshot;
+        $("undo").disabled = busy || !dirty;
+        $("remove").disabled = busy || !selected.size;
+        $("all").disabled = busy || !rows.length;
+        $("all").checked = !!rows.length && selected.size === rows.length;
+        $("all").indeterminate =
+          selected.size > 0 && selected.size < rows.length;
+        document.querySelectorAll("tbody input").forEach((el) => {
+          el.disabled = busy;
+        });
+        $("count").textContent =
+          `${rows.length} 行${selected.size ? " · 已选 " + selected.size + " 行" : ""}`;
+      }
+      function changed() {
+        dirty = true;
+        notice("有未保存的修改");
+        controls();
+      }
+      function render() {
+        $("rows").replaceChildren();
+        rows.forEach((row, index) => {
+          const tr = document.createElement("tr"),
+            first = document.createElement("td"),
+            select = document.createElement("input");
+          select.type = "checkbox";
+          select.checked = selected.has(row.id);
+          select.setAttribute("aria-label", `选择第 ${index + 1} 行`);
+          select.onchange = () => {
+            select.checked ? selected.add(row.id) : selected.delete(row.id);
+            controls();
+          };
+          first.append(select);
+          tr.append(first);
+          columns.forEach((key, col) => {
+            const td = document.createElement("td"),
+              input = document.createElement("input");
+            input.className = "cell";
+            input.type = key === "date" ? "date" : "text";
+            input.value = row[key];
+            input.maxLength = key === "result" ? 4000 : 500;
+            input.setAttribute(
+              "aria-label",
+              `第 ${index + 1} 行${labels[col]}`,
+            );
+            input.oninput = () => {
+              row[key] = input.value;
+              changed();
+            };
+            input.onkeydown = (e) => {
+              if (e.key === "Enter" && !e.isComposing) {
+                e.preventDefault();
+                $("rows")
+                  .children[index + 1]?.querySelectorAll(".cell")
+                  [col]?.focus();
+              }
+            };
+            td.append(input);
+            tr.append(td);
+          });
+          $("rows").append(tr);
+        });
+        controls();
+      }
+      $("all").onchange = () => {
+        selected.clear();
+        if ($("all").checked) rows.forEach((r) => selected.add(r.id));
+        render();
+      };
+      $("add").onclick = () => {
+        const d = new Date();
+        rows.push({
+          id: uid(),
+          date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+          agent: "",
+          subject: "",
+          category: "",
+          result: "",
+          note: "",
+        });
+        changed();
+        render();
+        $("rows").lastElementChild.querySelectorAll(".cell")[1].focus();
+      };
+      $("remove").onclick = () => {
+        rows = rows.filter((r) => !selected.has(r.id));
+        selected.clear();
+        changed();
+        render();
+      };
+      $("undo").onclick = () => {
+        rows = structuredClone(snapshot.rows);
+        selected.clear();
+        dirty = false;
+        render();
+        notice("已撤销本地未保存修改。");
+      };
+      $("save").onclick = async () => {
+        if (busy || !dirty) return;
+        busy = true;
+        controls();
+        notice("正在保存…");
+        try {
+          const saved = await window.arvlet.setState(
+            { ...snapshot, rows },
+            revision,
+          );
+          snapshot = structuredClone(saved.data);
+          revision = saved.revision;
+          dirty = false;
+          notice("已保存到服务端");
+        } catch (e) {
+          notice(
+            "保存失败，草稿已保留。" +
+              e.message +
+              "。如果其他人已更新，请先复制你的修改，再重新打开链接核对。",
+            true,
+          );
+        } finally {
+          busy = false;
+          controls();
+        }
+      };
+      window.addEventListener("beforeunload", (e) => {
+        if (dirty) e.preventDefault();
+      });
+      async function load() {
+        try {
+          const saved = await window.arvlet.getState();
+          if (
+            saved.data?.schemaVersion !== 1 ||
+            !Array.isArray(saved.data.rows) ||
+            saved.data.rows.some(
+              (r) =>
+                typeof r.id !== "string" ||
+                columns.some((k) => typeof r[k] !== "string"),
+            )
+          )
+            throw Error("台账数据格式不匹配");
+          snapshot = structuredClone(saved.data);
+          rows = structuredClone(snapshot.rows);
+          revision = saved.revision;
+          busy = false;
+          render();
+          notice("已加载服务端数据，可以直接编辑单元格。");
+        } catch (e) {
+          notice("加载失败：" + e.message, true);
+        }
+      }
+      load();
+    })();
+  </script>
+</html>

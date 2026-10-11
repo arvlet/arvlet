@@ -100,25 +100,27 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
   }
 
   return (
-    <section className="workspace" aria-label="产物工作区">
+    <section className="workspace" aria-label="Artifact workspace">
       <header className="workspace-heading">
         <button
           className="text-button"
           disabled={busy}
           onClick={() => {
-            if (!dirty || confirm("有未保存的修改，仍要关闭吗？")) onClose();
+            if (!dirty || confirm("You have unsaved changes. Close anyway?"))
+              onClose();
           }}
         >
-          ← 产物库
+          ← Artifacts
         </button>
         <div>
           <span className="eyebrow">
-            {artifact.collection || "未归档"} / {artifact.kind.toUpperCase()}
+            {artifact.collection || "Uncategorized"} /{" "}
+            {artifact.kind.toUpperCase()}
           </span>
           <h1>{artifact.title}</h1>
         </div>
         <label className="version-select">
-          历史版本
+          Version history
           <select
             disabled={busy}
             value={version}
@@ -126,7 +128,9 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
               const next = Number(event.target.value);
               if (
                 content !== original &&
-                !confirm("切换版本会放弃未保存的内容，继续吗？")
+                !confirm(
+                  "Switching versions will discard unsaved content. Continue?",
+                )
               )
                 return;
               void perform(async () => {
@@ -142,19 +146,19 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
             {artifact.versions.map((item) => (
               <option key={item.version} value={item.version}>
                 v{item.version}
-                {item.version === artifact.revision ? " · 最新" : ""}
+                {item.version === artifact.revision ? " · Latest" : ""}
               </option>
             ))}
           </select>
         </label>
       </header>
       <div className="workspace-tools">
-        <nav aria-label="产物视图">
+        <nav aria-label="Artifact views">
           {[
-            ["preview", "预览"],
-            ["edit", "编辑内容"],
-            ["data", "交互数据"],
-            ["entries", "相关记录"],
+            ["preview", "Preview"],
+            ["edit", "Edit content"],
+            ["data", "App data"],
+            ["entries", "Related entries"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -166,18 +170,21 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
             </button>
           ))}
         </nav>
-        <span className="muted">内容 v{version} · 数据独立保存</span>
+        <span className="muted">
+          Content v{version} · App data saved separately
+        </span>
       </div>
       {error && (
         <p className="error" role="alert">
           {error}{" "}
           {error.includes("Revision conflict") &&
-            "服务端已有新版本。请先复制保留当前修改，再重新打开产物核对。"}
+            "A newer version exists on the server. Copy your changes, then reopen the artifact to compare."}
         </p>
       )}
       {version !== artifact.revision && (
         <div className="notice">
-          正在查看历史版本。保存会创建新版本，不会覆盖历史内容。
+          You are viewing a previous version. Saving creates a new version and
+          preserves the history.
         </div>
       )}
       {tab === "preview" && (
@@ -191,7 +198,7 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
       {tab === "edit" && (
         <div className="editor-pane">
           <label className="sr-only" htmlFor="content">
-            产物源代码
+            Artifact source
           </label>
           <textarea
             id="content"
@@ -203,21 +210,23 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
           />
           <div className="save-bar">
             <input
-              aria-label="版本说明"
+              aria-label="Version note"
               disabled={busy}
-              placeholder="简短说明这次改动（可选）"
+              placeholder="Describe this change (optional)"
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />
             <span>
-              {content !== original ? "有未保存的修改" : "与所选版本一致"}
+              {content !== original
+                ? "Unsaved changes"
+                : "Matches the selected version"}
             </span>
             <button
               className="primary"
               disabled={busy}
               onClick={() => void saveContent()}
             >
-              保存为新版本
+              Save new version
             </button>
           </div>
         </div>
@@ -225,12 +234,12 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
       {tab === "data" && state && (
         <div className="editor-pane">
           <p className="notice">
-            编辑产物的业务数据，不会修改产物代码。当前数据版本 r{state.revision}
-            。
+            Edit app data independently of the artifact source. Current data
+            revision: r{state.revision}.
           </p>
           <textarea
             className="code-editor"
-            aria-label="交互数据 JSON"
+            aria-label="App data JSON"
             disabled={busy}
             value={stateText}
             onChange={(event) => setStateText(event.target.value)}
@@ -243,7 +252,9 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
                 void perform(async () => {
                   if (
                     stateText !== JSON.stringify(state.data, null, 2) &&
-                    !confirm("重新读取会放弃未保存的数据修改，继续吗？")
+                    !confirm(
+                      "Reloading will discard unsaved data changes. Continue?",
+                    )
                   )
                     return;
                   const saved = await api<ArtifactState>(
@@ -254,7 +265,7 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
                 })
               }
             >
-              重新读取
+              Reload
             </button>
             <button
               className="primary"
@@ -271,7 +282,7 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
                 })
               }
             >
-              保存数据
+              Save data
             </button>
           </div>
         </div>
@@ -292,7 +303,9 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
               });
             }}
           >
-            <label htmlFor="related-entry">为这个产物留一条记录</label>
+            <label htmlFor="related-entry">
+              Add an entry for this artifact
+            </label>
             <textarea
               id="related-entry"
               disabled={busy}
@@ -301,7 +314,7 @@ export function Editor({ artifact, onChanged, onClose }: Props) {
               onChange={(event) => setEntry(event.target.value)}
             />
             <button className="primary" disabled={busy}>
-              追加记录
+              Add entry
             </button>
           </form>
           <EntryList entries={entries} />
@@ -315,14 +328,16 @@ export function EntryList({ entries }: { entries: Entry[] }) {
   return (
     <div className="timeline">
       {entries.length === 0 ? (
-        <p className="muted">还没有记录。留下一次观察、修改说明或执行结果。</p>
+        <p className="muted">
+          No entries yet. Add an observation, change note, or result.
+        </p>
       ) : (
         entries.map((entry) => (
           <article key={entry.id}>
             <div className="entry-meta">
               <strong>{entry.agent}</strong>
-              <time>{new Date(entry.created_at).toLocaleString("zh-CN")}</time>
-              {entry.artifact_id && <span>关联产物</span>}
+              <time>{new Date(entry.created_at).toLocaleString("en-US")}</time>
+              {entry.artifact_id && <span>Linked artifact</span>}
             </div>
             <p>{entry.message}</p>
           </article>

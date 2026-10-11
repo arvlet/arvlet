@@ -25,6 +25,8 @@ const version = object({
   created_at: string,
 });
 const schemas = {
+  Share: object({ path: string }),
+  Revocation: object({ revoked: { type: "boolean" } }),
   Artifact: artifact,
   ArtifactDetail: object({
     ...artifact.properties,
@@ -179,6 +181,35 @@ route(
 );
 route("/api/v1/artifacts/{id}/state", "get", "Get state", "State");
 route("/api/v1/artifacts/{id}/state", "put", "Update state", "State", "State");
+route(
+  "/api/v1/artifacts/{id}/shares",
+  "post",
+  "Create editable share",
+  "Share",
+);
+route(
+  "/api/v1/artifacts/{id}/shares",
+  "delete",
+  "Revoke all artifact shares",
+  "Revocation",
+);
+route("/s/{token}/state", "get", "Read shared artifact state", "State");
+route(
+  "/s/{token}/state",
+  "put",
+  "Update shared artifact state",
+  "State",
+  "State",
+);
+for (const method of ["get", "put"]) {
+  const operation = paths["/s/{token}/state"][method];
+  operation.security = [];
+  operation.description =
+    "The unguessable path token authorizes access to one artifact. No workspace cookie or API key is needed. Revoked tokens return 404.";
+  operation.parameters = operation.parameters.filter(
+    (p) => p.name !== "Idempotency-Key",
+  );
+}
 route("/api/v1/entries", "get", "List entries", "EntryPage", null, [
   "artifact_id",
   "limit",

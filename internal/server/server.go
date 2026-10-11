@@ -80,6 +80,16 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /api/v1/entries", s.protected(s.createEntry))
 	m.HandleFunc("GET /api/v1/export", s.protected(s.export))
 	m.HandleFunc("GET /preview/{id}/{version}", s.protected(s.preview))
+	m.HandleFunc("POST /api/v1/artifacts/{id}/shares", s.protected(s.createShare))
+	m.HandleFunc("DELETE /api/v1/artifacts/{id}/shares", s.protected(s.revokeShares))
+	m.HandleFunc("GET /s/{token}", s.shared(s.sharePage))
+	m.HandleFunc("GET /s/{token}/preview", s.shared(s.preview))
+	m.HandleFunc("GET /s/{token}/state", s.shared(s.getState))
+	m.HandleFunc("PUT /s/{token}/state", s.shared(s.putState))
+	m.HandleFunc("GET /share.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		w.Write(shareScript)
+	})
 	m.HandleFunc("GET /api/openapi.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(openAPI)

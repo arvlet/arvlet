@@ -51,7 +51,7 @@ export async function api<T>(
     // Preserve the retry key: the upstream mutation may already have committed.
     throw new APIError(
       response.status,
-      `服务器返回了无效响应（HTTP ${response.status}），请重试。`,
+      `The server returned an invalid response (HTTP ${response.status}). Please try again.`,
     );
   }
   if (response.ok || response.status < 500) pendingWrites.delete(fingerprint);
@@ -69,4 +69,6 @@ export async function api<T>(
 }
 
 export const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : "操作失败，请重试。";
+  error instanceof Error
+    ? error.message
+    : "Something went wrong. Please try again.";

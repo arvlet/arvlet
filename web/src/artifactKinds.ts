@@ -1,7 +1,7 @@
 export const kindLabels: Record<string, string> = {
-  html: "交互应用",
-  markdown: "文档",
-  json: "数据",
+  html: "App",
+  markdown: "Document",
+  json: "Data",
 };
 export const kindMarks: Record<string, string> = {
   html: "〈/〉",

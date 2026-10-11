@@ -2,3 +2,14 @@
     encode zstd gzip
     reverse_proxy app:8090
 }
+
+# The LAN listener exposes only capability-scoped share pages, never the workspace.
+:8080 {
+    @share path /s/* /share.js
+    handle @share {
+        reverse_proxy app:8090
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

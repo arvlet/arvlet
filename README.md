@@ -7,6 +7,8 @@ place, with persistent state and content history.
 **Early v0.1. Single-owner, self-hosted.** Built with Go, React/TypeScript, SQLite,
 Caddy, and Docker Compose. No chat interface, model server, or task workflow.
 
+![Arvlet workbench](docs/images/workspace-current.png)
+
 ## What works
 
 - Agents create HTML, Markdown, or JSON artifacts directly through a Bearer API.
@@ -15,16 +17,26 @@ Caddy, and Docker Compose. No chat interface, model server, or task workflow.
 - Records are append-only and can exist independently or link to an artifact.
 - Retry keys prevent duplicate writes; revision checks prevent silent overwrites.
 - The workbench supports searching, filtering, content history, and workspace export.
+- Standalone editable links display only the artifact, with no workbench or login.
+- Every artifact can be opened directly with `/?artifact=<id>` in the workbench.
 
 External scripts, network-connected HTML apps, file uploads, React source builds,
 multi-user accounts, and scoped agent tokens are not part of this release.
 
 ## Run locally
 
+The workbench uses the [Shadcn Admin](https://github.com/satnaing/shadcn-admin)
+sidebar, theme, and UI primitives, adapted for Arvlet's artifact library and
+editor. Its MIT license is retained in `web/SHADCN-ADMIN-LICENSE`. The library
+uses a table view, the sidebar collapses on desktop and opens as a drawer on
+mobile, and the header switches between light and dark themes.
+
 Requirements: Docker with Compose. Node.js 24 is used by the setup and demo scripts;
 the deployed application has no Node or Python runtime dependency.
 
 ```sh
+git clone https://github.com/arvlet/arvlet.git
+cd arvlet
 node scripts/setup.mjs
 docker compose up -d --build
 node scripts/seed.mjs
@@ -77,6 +89,8 @@ curl http://localhost:3090/api/v1/artifacts \
 | Read / write interaction data             | `GET / PUT /api/v1/artifacts/{id}/state`        |
 | Append / list records                     | `POST / GET /api/v1/entries`                    |
 | Export workspace                          | `GET /api/v1/export`                            |
+| Create an editable share                  | `POST /api/v1/artifacts/{id}/shares`            |
+| Revoke all shares for an artifact         | `DELETE /api/v1/artifacts/{id}/shares`          |
 
 Version writes use `{ "revision": 1, "content": "...", "note": "..." }`.
 State writes use `{ "revision": 0, "data": { "count": 1 } }` (revision 0 means
@@ -94,7 +108,8 @@ const current = await window.arvlet.getState();
 const saved = await window.arvlet.setState({ count: 2 }, current.revision);
 ```
 
-The viewer must enable “允许此产物保存自身数据” before writes succeed. State belongs
+In the workbench, enable **Allow this artifact to save its data** before writes succeed.
+Standalone edit links already grant that permission for their artifact. State belongs
 to the artifact, not a content version. Editing or restoring code does not reset it.
 See [the budget example](examples/budget.html). This is browser isolation, not a
 CPU/memory quota or a network firewall (self-navigation is not contained); use
@@ -125,6 +140,66 @@ docker compose up -d
 Never copy an old database over a running instance or mix it with unrelated WAL
 files. Upgrade by backing up first and rebuilding the image. Schema migrations are
 forward-only; rollback requires the old image and its matching backup.
+
+## Standalone editable shares
+
+`POST /api/v1/artifacts/{id}/shares` (workspace authentication required) returns
+an unguessable `/s/{token}` path. Anyone holding this link can view that HTML
+artifact and edit its app data without a workspace login. Published HTML is pinned
+to the version at link creation; app data stays shared with the original artifact.
+`DELETE /api/v1/artifacts/{id}/shares` revokes all links for that artifact.
+Shares do not grant access to other artifacts or workspace APIs. Treat edit links
+as bearer credentials. Concurrent saves use revision checks and return 409 on conflict.
+
+For LAN sharing, set `ARVLET_SHARE_BIND` to the host's LAN IPv4 address in `.env`
+and run `docker compose up -d`. Share `http://<LAN-IP>:3091/s/<token>`.
+Port 3091 exposes only share pages and their scoped state endpoints; the normal
+workspace remains on its existing bind address. The host must stay running and
+recipients must be on the same reachable LAN. Use HTTPS for Internet deployment.
+
+```dotenv
+# Replace this example address with your own LAN IPv4 address.
+ARVLET_SHARE_BIND=192.168.1.100
+ARVLET_SHARE_PORT=3091
+```
+
+```sh
+curl -X POST http://localhost:3090/api/v1/artifacts/ARTIFACT_ID/shares \
+  -H "Authorization: Bearer $ARVLET_API_KEY"
+# {"path":"/s/<token>"}
+```
+
+Send `http://192.168.1.100:3091/s/<token>` to a recipient on the same LAN.
+The share listener's root `/` intentionally returns 404. Use the complete link.
+`localhost` points to the recipient's own computer, so it cannot be used for LAN sharing.
+Allow the share port through the host firewall only for the intended network.
+The default share bind is loopback until you configure it explicitly.
+
+Link creation and revocation currently use the API, not a Share button in the UI.
+Recipients can change app data through the artifact's interface; they cannot edit
+its source code or manage the workspace. There are no read-only links, expiry
+settings, per-recipient accounts, or automatic merge of concurrent edits yet.
+JSON workspace export does not include share grants; SQLite backups do.
+
+## Creating a ledger
+
+A ledger is an HTML artifact with JSON state, not a separate deployment. An agent:
+
+1. Creates the interface using `POST /api/v1/artifacts` with `kind: "html"`.
+2. Initializes its data with `PUT /api/v1/artifacts/{id}/state` and `revision: 0`.
+3. Creates a share using `POST /api/v1/artifacts/{id}/shares`.
+
+The artifact calls the state bridge to read and save the same server-side data
+that agents access through the API. New ledgers need no Docker rebuild.
+Changing HTML creates a new content version; generate a new share to publish that
+version. Existing shares continue to use their pinned code and shared live data.
+
+Examples: [record ledger](examples/worklog.html), [editable cell table](examples/table-ledger.html),
+and [budget app](examples/budget.html). To create an example ledger with sample
+data and an edit link, run `node scripts/create-ledger.mjs table` or
+`node scripts/create-ledger.mjs worklog`. Each invocation creates a new artifact.
+These are self-contained examples, not spreadsheet engines: formulas, rich cell
+types, bulk paste, and collaborative cursors are not implemented.
 
 ## Development
 

@@ -45,7 +45,9 @@ export function Preview({ artifact, version, content }: Props) {
         if (request.op === "state.get") reply(await api<ArtifactState>(path));
         else if (request.op === "state.put") {
           if (!writePermission.current)
-            throw new Error("请先在预览上方允许此产物保存数据。");
+            throw new Error(
+              "Allow this artifact to save data using the control above the preview first.",
+            );
           const payload = request.payload;
           if (
             !payload ||
@@ -61,7 +63,7 @@ export function Preview({ artifact, version, content }: Props) {
             data: payload.data,
           });
           reply(saved);
-          if (mounted) setNotice("交互数据已保存到服务端");
+          if (mounted) setNotice("App data saved to the server");
         } else throw new Error("Unsupported operation");
       } catch (error) {
         reply(undefined, messageOf(error));
@@ -107,9 +109,11 @@ export function Preview({ artifact, version, content }: Props) {
               setAllowWrite(event.target.checked);
             }}
           />
-          允许此产物保存自身数据
+          Allow this artifact to save its data
         </label>
-        <span role="status">{notice || "隔离预览 · 无父页面访问权限"}</span>
+        <span role="status">
+          {notice || "Sandboxed preview · No access to the parent page"}
+        </span>
       </div>
       <iframe
         ref={iframe}

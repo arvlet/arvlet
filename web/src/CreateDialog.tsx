@@ -51,10 +51,10 @@ export function CreateDialog({
         }}
       >
         <div className="dialog-heading">
-          <h2 id="create-title">新建产物</h2>
+          <h2 id="create-title">New artifact</h2>
           <button
             type="button"
-            aria-label="关闭"
+            aria-label="Close"
             disabled={busy}
             onClick={onClose}
           >
@@ -62,19 +62,19 @@ export function CreateDialog({
           </button>
         </div>
         <label>
-          名称
+          Name
           <input
             name="title"
             disabled={busy}
             required
             maxLength={200}
-            placeholder="给这个成果一个名字"
+            placeholder="Give this artifact a name"
             autoFocus
           />
         </label>
         <div className="form-row">
           <label>
-            类型
+            Type
             <select
               value={kind}
               disabled={busy}
@@ -88,17 +88,17 @@ export function CreateDialog({
             </select>
           </label>
           <label>
-            归档到
+            Collection
             <input
               name="collection"
               disabled={busy}
-              placeholder="可选，例如：个人工具"
+              placeholder="Optional, e.g. Personal tools"
               maxLength={100}
             />
           </label>
         </div>
         <label>
-          初始内容
+          Initial content
           <textarea
             key={kind}
             name="content"
@@ -108,8 +108,8 @@ export function CreateDialog({
               kind === "json"
                 ? "{}"
                 : kind === "html"
-                  ? "<h1>Hello, Arvlet.</h1>\n<p>从这里开始你的交互产物。</p>"
-                  : "# 新的想法\n\n从这里开始。"
+                  ? "<h1>Hello, Arvlet.</h1>\n<p>Start your interactive artifact here.</p>"
+                  : "# A new idea\n\nStart here."
             }
             spellCheck={false}
           />
@@ -120,7 +120,7 @@ export function CreateDialog({
           </p>
         )}
         <button className="primary" disabled={busy}>
-          {busy ? "正在创建…" : "创建产物"}
+          {busy ? "Creating…" : "Create artifact"}
         </button>
       </form>
     </dialog>

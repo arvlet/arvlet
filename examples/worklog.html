@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agent 工作台账</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f7f8f4;
+      color: #263e35;
+      font:
+        15px/1.65 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 1000px;
+      margin: auto;
+      padding: 36px 24px;
+    }
+    header {
+      border-bottom: 1px solid #d9e0d8;
+      padding-bottom: 26px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #668074;
+    }
+    h1 {
+      font-size: 32px;
+      letter-spacing: -1px;
+      margin: 12px 0 8px;
+    }
+    p {
+      margin: 0;
+      color: #6c7a71;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 24px 0;
+    }
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid #d6ded5;
+      padding: 10px 13px;
+      background: white;
+      color: inherit;
+    }
+    input[type="search"] {
+      flex: 1;
+      min-width: 180px;
+    }
+    button {
+      cursor: pointer;
+    }
+    button.primary {
+      background: #285843;
+      border-color: #285843;
+      color: white;
+    }
+    button:hover {
+      filter: brightness(0.96);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+    #summary {
+      font-size: 13px;
+      color: #6c7a71;
+      margin: 18px 0;
+    }
+    #notice {
+      font-size: 13px;
+      min-height: 24px;
+      margin: 10px 0;
+      color: #476448;
+    }
+    #notice.error {
+      color: #9e402e;
+    }
+    article {
+      padding: 22px 0;
+      border-top: 1px solid #e0e5dc;
+      display: grid;
+      grid-template-columns: 112px 1fr auto;
+      gap: 18px;
+    }
+    article time {
+      color: #738276;
+      font-size: 12px;
+      padding-top: 5px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 6px;
+      font-weight: 600;
+    }
+    article p {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #475b50;
+    }
+    .meta {
+      font-size: 12px;
+      color: #768678;
+      margin-top: 12px;
+    }
+    .edit {
+      align-self: start;
+      border: 0;
+      background: transparent;
+      font-size: 13px;
+      color: #496d58;
+    }
+    form {
+      background: white;
+      border: 1px solid #d6ded5;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    form h2 {
+      margin-bottom: 18px;
+    }
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .wide {
+      grid-column: 1/-1;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 115px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    [hidden] {
+      display: none !important;
+    }
+    .empty {
+      padding: 36px;
+      text-align: center;
+      border-top: 1px solid #e0e5dc;
+    }
+    footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: #869087;
+    }
+    @media (max-width: 580px) {
+      main {
+        padding: 24px 18px;
+      }
+      h1 {
+        font-size: 27px;
+      }
+      article {
+        grid-template-columns: 1fr auto;
+        gap: 5px;
+      }
+      article time {
+        grid-column: 1/-1;
+      }
+      .fields {
+        grid-template-columns: 1fr;
+      }
+      .wide {
+        grid-column: auto;
+      }
+    }
+  </style>
+  <main>
+    <header>
+      <div class="eyebrow">ARVLET / WORKLOG</div>
+      <h1>每一次推进，都有迹可循。</h1>
+      <p>记录 Agent 做过的事、留下的成果，以及值得保留的判断。</p>
+    </header>
+    <div class="toolbar">
+      <input
+        id="search"
+        type="search"
+        placeholder="搜索记录、Agent、成果…"
+        aria-label="搜索记录"
+      /><select id="filter" aria-label="筛选分类">
+        <option value="">全部分类</option>
+        <option>开发</option>
+        <option>审查</option>
+        <option>验证</option>
+        <option>发布</option>
+        <option>其他</option></select
+      ><button id="refresh">刷新</button
+      ><button id="new" class="primary" disabled>新增记录</button>
+    </div>
+    <div id="notice" role="status" aria-live="polite">正在读取服务端数据…</div>
+    <form id="editor" hidden>
+      <h2 id="form-title">新增记录</h2>
+      <div class="fields">
+        <label>日期<input id="date" type="date" required /></label
+        ><label
+          >Agent<input
+            id="agent"
+            required
+            maxlength="80"
+            placeholder="例如 Codex" /></label
+        ><label class="wide"
+          >标题<input id="title" required maxlength="160" /></label
+        ><label
+          >分类<select id="category">
+            <option>开发</option>
+            <option>审查</option>
+            <option>验证</option>
+            <option>发布</option>
+            <option>其他</option>
+          </select></label
+        ><label class="wide"
+          >执行结果 / 说明<textarea
+            id="result"
+            required
+            maxlength="6000"
+          ></textarea>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="primary" type="submit">保存到服务端</button
+        ><button id="cancel" type="button">取消</button>
+      </div>
+    </form>
+    <div id="summary"></div>
+    <section id="list" aria-label="台账记录"></section>
+    <footer>
+      内容保存在 Arvlet 服务端。Agent 可通过此产物的 State API 读写同一份台账。
+    </footer>
+  </main>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      let state,
+        editing = null,
+        busy = false;
+      const fields = ["date", "agent", "title", "category", "result"];
+      const notice = (message, error = false) => {
+        $("notice").textContent = message;
+        $("notice").className = error ? "error" : "";
+      };
+      function setBusy(value) {
+        busy = value;
+        document
+          .querySelectorAll("button,form input,form textarea,form select")
+          .forEach((el) => {
+            el.disabled = value;
+          });
+        $("new").disabled = value || !state;
+      }
+      function validate(value) {
+        if (
+          !Number.isInteger(value.revision) ||
+          value.data?.schemaVersion !== 1 ||
+          !Array.isArray(value.data.entries) ||
+          value.data.entries.some(
+            (e) =>
+              typeof e.id !== "string" ||
+              fields.some((k) => typeof e[k] !== "string"),
+          )
+        )
+          throw new Error("数据格式不匹配，未进行任何覆盖。");
+        return value;
+      }
+      function render() {
+        const q = $("search").value.trim().toLocaleLowerCase(),
+          category = $("filter").value;
+        const all = state?.data.entries || [];
+        const entries = all
+          .filter(
+            (e) =>
+              (!category || e.category === category) &&
+              fields.some((k) => e[k].toLocaleLowerCase().includes(q)),
+          )
+          .sort((a, b) => b.date.localeCompare(a.date));
+        $("summary").textContent =
+          `共 ${all.length} 条记录 · 当前显示 ${entries.length} 条`;
+        $("list").replaceChildren();
+        if (!entries.length) {
+          const p = document.createElement("p");
+          p.className = "empty";
+          p.textContent = "没有匹配的记录";
+          $("list").append(p);
+        }
+        for (const entry of entries) {
+          const article = document.createElement("article"),
+            time = document.createElement("time"),
+            body = document.createElement("div"),
+            title = document.createElement("h2"),
+            result = document.createElement("p"),
+            meta = document.createElement("div"),
+            edit = document.createElement("button");
+          time.textContent = entry.date;
+          time.dateTime = entry.date;
+          title.textContent = entry.title;
+          result.textContent = entry.result;
+          meta.textContent = `${entry.agent} · ${entry.category}`;
+          meta.className = "meta";
+          edit.textContent = "编辑";
+          edit.className = "edit";
+          edit.disabled = busy;
+          edit.setAttribute("aria-label", `编辑：${entry.title}`);
+          edit.onclick = () => open(entry);
+          body.append(title, result, meta);
+          article.append(time, body, edit);
+          $("list").append(article);
+        }
+      }
+      function open(entry) {
+        if (!$("editor").hidden) {
+          notice("请先保存或取消当前编辑。", true);
+          return;
+        }
+        editing = entry?.id || null;
+        const now = new Date(),
+          today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const value = entry || {
+          date: today,
+          agent: "Codex",
+          title: "",
+          category: "开发",
+          result: "",
+        };
+        fields.forEach((k) => {
+          $(k).value = value[k];
+        });
+        $("form-title").textContent = entry ? "编辑记录" : "新增记录";
+        $("editor").hidden = false;
+        $("title").focus();
+      }
+      async function refresh() {
+        setBusy(true);
+        try {
+          state = validate(await window.arvlet.getState());
+          render();
+          notice(
+            $("editor").hidden
+              ? "已读取服务端最新记录。"
+              : "已读取最新数据；当前草稿已保留，请核对后保存。",
+          );
+        } catch (e) {
+          notice("读取失败：" + e.message, true);
+        } finally {
+          setBusy(false);
+        }
+      }
+      $("editor").onsubmit = async (event) => {
+        event.preventDefault();
+        if (busy || !state) return;
+        const entry = {
+          id:
+            editing ||
+            Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+              b.toString(16).padStart(2, "0"),
+            ).join(""),
+        };
+        fields.forEach((k) => {
+          entry[k] = $(k).value.trim();
+        });
+        if (fields.some((k) => !entry[k])) {
+          notice("请填写完整内容。", true);
+          return;
+        }
+        if (editing && !state.data.entries.some((e) => e.id === editing)) {
+          notice("这条记录已不存在，请复制内容后新增。", true);
+          return;
+        }
+        const entries = editing
+          ? state.data.entries.map((e) =>
+              e.id === editing ? { ...e, ...entry } : e,
+            )
+          : [entry, ...state.data.entries];
+        setBusy(true);
+        try {
+          state = validate(
+            await window.arvlet.setState(
+              { ...state.data, entries },
+              state.revision,
+            ),
+          );
+          $("editor").hidden = true;
+          editing = null;
+          render();
+          notice("已保存到服务端。");
+        } catch (e) {
+          notice(
+            "保存失败，草稿已保留。请确认已勾选预览上方的“允许此产物保存自身数据”；如有版本冲突，请刷新后核对。详情：" +
+              e.message,
+            true,
+          );
+        } finally {
+          setBusy(false);
+        }
+      };
+      $("new").onclick = () => open();
+      $("cancel").onclick = () => {
+        $("editor").hidden = true;
+        editing = null;
+      };
+      $("refresh").onclick = refresh;
+      $("search").oninput = render;
+      $("filter").onchange = render;
+      refresh();
+    })();
+  </script>
+</html>
