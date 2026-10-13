@@ -246,18 +246,27 @@ func TestCookieWritesRequireOriginAndBearerDoesNot(t *testing.T) {
 	requireStatus(t, request(s, "POST", "/api/v1/entries", `{"message":"agent call"}`, ""), 201)
 }
 
-func TestPreviewIsOpaqueAndHasNoNetworkAccess(t *testing.T) {
+func TestPreviewUsesSeparateOriginAndHasNoNetworkAccess(t *testing.T) {
 	s := newTestServer(t)
 	a := createTestArtifact(t, s)
 	w := request(s, "GET", "/preview/"+a.ID+"/1?channel=0123456789abcdef", "", "")
 	requireStatus(t, w, 200)
+	var config struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &config); err != nil {
+		t.Fatal(err)
+	}
+	w = httptest.NewRecorder()
+	s.PreviewHandler().ServeHTTP(w, httptest.NewRequest("GET", config.URL, nil))
+	requireStatus(t, w, 200)
 	csp := w.Header().Get("Content-Security-Policy")
-	for _, policy := range []string{"sandbox allow-scripts;", "connect-src 'none'", "form-action 'none'", "base-uri 'none'"} {
+	for _, policy := range []string{"sandbox allow-scripts allow-same-origin;", "connect-src 'none'", "form-action 'none'", "base-uri 'none'"} {
 		if !strings.Contains(csp, policy) {
 			t.Errorf("missing policy %s", policy)
 		}
 	}
-	if strings.Contains(csp, "allow-same-origin") || strings.Contains(w.Body.String(), testSecret) {
+	if strings.Contains(w.Body.String(), testSecret) {
 		t.Fatal("preview exposes credentials or origin")
 	}
 	requireStatus(t, request(s, "GET", "/preview/"+a.ID+"/1?channel=%3Cscript%3E", "", ""), 400)

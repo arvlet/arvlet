@@ -7,11 +7,13 @@
     b.toString(16).padStart(2, "0"),
   ).join("");
   let busy = false;
+  let previewOrigin;
   window.addEventListener("message", async (event) => {
     const request = event.data;
     if (
       event.source !== frame.contentWindow ||
-      event.origin !== "null" ||
+      !previewOrigin ||
+      event.origin !== previewOrigin ||
       request?.type !== "arvlet:request" ||
       request.channel !== channel ||
       typeof request.id !== "string" ||
@@ -21,7 +23,7 @@
     const reply = (result, error) =>
       frame.contentWindow.postMessage(
         { type: "arvlet:reply", channel, id: request.id, result, error },
-        "*",
+        previewOrigin,
       );
     if (busy) {
       reply(undefined, "Another request is in progress");
@@ -50,6 +52,22 @@
       busy = false;
     }
   });
-  frame.src = base + "/preview?channel=" + channel;
-  frame.hidden = false;
+  fetch(base + "/preview?channel=" + channel, { credentials: "omit" })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Unable to load preview");
+      return response.json();
+    })
+    .then((preview) => {
+      if (
+        preview.origin === location.origin ||
+        new URL(preview.url).origin !== preview.origin
+      )
+        throw new Error("Preview requires a separate origin");
+      previewOrigin = preview.origin;
+      frame.src = preview.url;
+      frame.hidden = false;
+    })
+    .catch((error) => {
+      document.getElementById("error").textContent = error.message;
+    });
 })();

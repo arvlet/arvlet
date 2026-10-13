@@ -40,11 +40,19 @@ revision returns 409. Reload and reconcile; never blindly retry an overwrite.
 
 ## Browser and artifact boundary
 
-The workbench uses React/TypeScript. HTML runs inside an opaque sandbox with inline
-scripts enabled, but without same-origin access, forms, or popups. CSP blocks
+The workbench uses React/TypeScript. HTML runs inside an separate-origin sandbox with inline
+scripts and its own origin enabled, but without parent-origin access, forms, or popups. CSP blocks
 fetch/XHR and external resource loading. A per-preview message channel exposes only that artifact's state.
 The host validates source window, channel, operation and write permission.
 The iframe receives no API token. Markdown is sanitized before rendering.
+
+The renderer runs on a separate HTTP listener with only signed preview routes.
+Tickets bind the artifact, version, channel, parent origin, renderer origin, and
+expiry; share tickets additionally bind a revocable share grant. The workbench
+and share handlers return ticket metadata, never executable artifact HTML.
+Both bridge directions validate an exact origin and source window. Preview
+storage is shared across artifacts on that renderer origin, unlike the former
+opaque sandbox; it must not be used for sensitive cross-artifact persistence.
 
 This is browser isolation, not a general compute sandbox or a network firewall.
 CSP does not reliably prevent an iframe from navigating itself to an external URL;

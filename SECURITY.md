@@ -5,7 +5,7 @@ entire workspace. Do not expose a local HTTP deployment to the public network.
 Use the documented HTTPS configuration for remote access and protect `.env` and
 database backups as credentials and private workspace data.
 
-HTML artifacts run in browser isolation with a restricted state bridge. They are
+HTML artifacts run on a dedicated preview origin in browser isolation with a restricted state bridge. They are
 not trusted application code. Fetch/XHR, external resource loading, parent-document access, and form
 submission are disabled. Iframe self-navigation is not a reliable network containment
 boundary. Only run artifact source trusted with its own data. CPU and memory usage

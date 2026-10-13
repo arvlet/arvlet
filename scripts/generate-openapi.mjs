@@ -26,6 +26,7 @@ const version = object({
 });
 const schemas = {
   Share: object({ path: string }),
+  Preview: object({ url: string, origin: string }),
   Revocation: object({ revoked: { type: "boolean" } }),
   Artifact: artifact,
   ArtifactDetail: object({
@@ -216,6 +217,23 @@ route("/api/v1/entries", "get", "List entries", "EntryPage", null, [
   "offset",
 ]);
 route("/api/v1/entries", "post", "Append entry", "Entry", "EntryInput");
+route(
+  "/preview/{id}/{version}",
+  "get",
+  "Create workbench preview ticket",
+  "Preview",
+  null,
+  ["channel"],
+);
+route(
+  "/s/{token}/preview",
+  "get",
+  "Create shared preview ticket",
+  "Preview",
+  null,
+  ["channel"],
+);
+paths["/s/{token}/preview"].get.security = [];
 const spec = {
   openapi: "3.1.0",
   info: {

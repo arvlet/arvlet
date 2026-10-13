@@ -6,7 +6,12 @@ import assert from "node:assert/strict";
 test("preview bridge only accepts matching parent replies and preserves revisions", async () => {
   let receive;
   const messages = [];
-  const parent = { postMessage: (message) => messages.push(message) };
+  const parent = {
+    postMessage: (message, targetOrigin) => {
+      assert.equal(targetOrigin, "http://localhost:3090");
+      messages.push(message);
+    },
+  };
   const window = {
     addEventListener: (_, listener) => {
       receive = listener;
@@ -16,12 +21,17 @@ test("preview bridge only accepts matching parent replies and preserves revision
     new URL("../internal/server/bridge.js", import.meta.url),
     "utf8",
   );
-  runInNewContext(source.replace("__ARVLET_CHANNEL__", '"test-channel"'), {
-    parent,
-    window,
-    setTimeout,
-    clearTimeout,
-  });
+  runInNewContext(
+    source
+      .replace("__ARVLET_CHANNEL__", '"test-channel"')
+      .replace("__ARVLET_PARENT__", '"http://localhost:3090"'),
+    {
+      parent,
+      window,
+      setTimeout,
+      clearTimeout,
+    },
+  );
   let resolved = false;
   const pending = window.arvlet.getState().then((value) => {
     resolved = true;
@@ -35,16 +45,24 @@ test("preview bridge only accepts matching parent replies and preserves revision
     result: { revision: 3, data: { total: 5 } },
   };
   receive({ source: {}, data: reply });
-  receive({ source: parent, data: { ...reply, channel: "wrong" } });
+  receive({
+    source: parent,
+    origin: "http://localhost:3090",
+    data: { ...reply, channel: "wrong" },
+  });
   await Promise.resolve();
   assert.equal(resolved, false);
-  receive({ source: parent, data: reply });
+  receive({ source: parent, origin: "http://localhost:3092", data: reply });
+  await Promise.resolve();
+  assert.equal(resolved, false);
+  receive({ source: parent, origin: "http://localhost:3090", data: reply });
   assert.equal((await pending).revision, 3);
   const saved = window.arvlet.setState({ total: 6 }, 3);
   const write = messages[1];
   assert.equal(write.payload.revision, 3);
   receive({
     source: parent,
+    origin: "http://localhost:3090",
     data: {
       ...write,
       type: "arvlet:reply",

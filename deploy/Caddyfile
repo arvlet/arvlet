@@ -3,6 +3,11 @@
     reverse_proxy app:8090
 }
 
+# Render-only listener: a separate Go mux has no workspace or state routes.
+:8081 {
+    reverse_proxy app:8091
+}
+
 # The LAN listener exposes only capability-scoped share pages, never the workspace.
 :8080 {
     @share path /s/* /share.js

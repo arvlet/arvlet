@@ -11,6 +11,30 @@ export function Preview({ artifact, version, content }: Props) {
   const [allowWrite, setAllowWrite] = useState(false);
   const writePermission = useRef(false);
   const [notice, setNotice] = useState("");
+  const [preview, setPreview] = useState<{ url: string; origin: string }>();
+
+  useEffect(() => {
+    if (artifact.kind !== "html") return;
+    let active = true;
+    setPreview(undefined);
+    api<{ url: string; origin: string }>(
+      `/preview/${artifact.id}/${version}?channel=${channel}`,
+    )
+      .then((value) => {
+        if (
+          value.origin === location.origin ||
+          new URL(value.url).origin !== value.origin
+        )
+          throw new Error("Preview requires a separate origin");
+        if (active) setPreview(value);
+      })
+      .catch((error) => {
+        if (active) setNotice(messageOf(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [artifact.id, artifact.kind, version, channel]);
 
   useEffect(() => {
     let mounted = true;
@@ -20,7 +44,8 @@ export function Preview({ artifact, version, content }: Props) {
       const frameWindow = iframe.current?.contentWindow;
       if (
         event.source !== frameWindow ||
-        event.origin !== "null" ||
+        !preview ||
+        event.origin !== preview.origin ||
         !request ||
         request.type !== "arvlet:request" ||
         request.channel !== channel ||
@@ -32,7 +57,7 @@ export function Preview({ artifact, version, content }: Props) {
         if (mounted)
           frameWindow?.postMessage(
             { type: "arvlet:reply", channel, id: request.id, result, error },
-            "*",
+            preview.origin,
           );
       };
       if (inFlight) {
@@ -76,7 +101,7 @@ export function Preview({ artifact, version, content }: Props) {
       mounted = false;
       window.removeEventListener("message", receive);
     };
-  }, [artifact.id, channel]);
+  }, [artifact.id, channel, preview]);
 
   if (artifact.kind === "markdown") {
     const html = DOMPurify.sanitize(marked.parse(content, { async: false }), {
@@ -115,12 +140,14 @@ export function Preview({ artifact, version, content }: Props) {
           {notice || "Sandboxed preview · No access to the parent page"}
         </span>
       </div>
-      <iframe
-        ref={iframe}
-        title={artifact.title}
-        sandbox="allow-scripts"
-        src={`/preview/${artifact.id}/${version}?channel=${channel}`}
-      />
+      {preview && (
+        <iframe
+          ref={iframe}
+          title={artifact.title}
+          sandbox="allow-scripts allow-same-origin"
+          src={preview.url}
+        />
+      )}
     </div>
   );
 }

@@ -73,6 +73,6 @@ func (s *Server) shared(f endpoint) http.HandlerFunc {
 
 func (s *Server) sharePage(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write([]byte(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arvlet</title><style>html,body{margin:0;height:100%;background:#f7f8f4}iframe{display:block;width:100%;height:100%;border:0}#error{padding:24px;font:16px system-ui}</style><script src="/share.js" defer></script></head><body><div id="error" role="status"></div><iframe title="Shared artifact" sandbox="allow-scripts" hidden></iframe></body></html>`))
+	_, err := w.Write([]byte(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arvlet</title><style>html,body{margin:0;height:100%;background:#f7f8f4}iframe{display:block;width:100%;height:100%;border:0}#error{padding:24px;font:16px system-ui}</style><script src="/share.js" defer></script></head><body><div id="error" role="status"></div><iframe title="Shared artifact" sandbox="allow-scripts allow-same-origin" hidden></iframe></body></html>`))
 	return err
 }

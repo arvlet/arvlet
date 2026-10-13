@@ -5,18 +5,22 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
 
 // Config supplies all deployment settings without reading process-global environment.
 type Config struct {
-	DBPath        string
-	APIKey        string
-	Password      string
-	SessionSecret string
-	Origin        string
-	Assets        http.FileSystem
+	DBPath             string
+	APIKey             string
+	Password           string
+	SessionSecret      string
+	Origin             string
+	PreviewOrigin      string
+	ShareOrigin        string
+	SharePreviewOrigin string
+	Assets             http.FileSystem
 }
 
 // Server owns a single-workspace database and its HTTP handlers.
@@ -30,6 +34,26 @@ type Server struct {
 
 // New validates configuration and applies storage migrations before serving requests.
 func New(cfg Config) (*Server, error) {
+	if cfg.PreviewOrigin == "" {
+		cfg.PreviewOrigin = "http://localhost:3092"
+	}
+	if cfg.ShareOrigin == "" {
+		cfg.ShareOrigin = "http://localhost:3091"
+	}
+	if cfg.SharePreviewOrigin == "" {
+		cfg.SharePreviewOrigin = cfg.PreviewOrigin
+	}
+	for _, origin := range []string{cfg.PreviewOrigin, cfg.ShareOrigin, cfg.SharePreviewOrigin} {
+		u, err := url.Parse(origin)
+		if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+			return nil, errors.New("invalid preview or share origin")
+		}
+	}
+	for _, origin := range []string{cfg.PreviewOrigin, cfg.SharePreviewOrigin} {
+		if sameOrigin(origin, cfg.Origin) || sameOrigin(origin, cfg.ShareOrigin) {
+			return nil, errors.New("preview must use a different origin from workbench and shares")
+		}
+	}
 	for _, v := range []string{cfg.APIKey, cfg.Password, cfg.SessionSecret} {
 		if len(v) < 24 {
 			return nil, errors.New("API key, password and session secret must each contain at least 24 characters")
@@ -44,6 +68,27 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	return &Server{db: db, cfg: cfg}, nil
+}
+
+func sameOrigin(a, b string) bool {
+	x, err := url.Parse(a)
+	if err != nil {
+		return false
+	}
+	y, err := url.Parse(b)
+	if err != nil {
+		return false
+	}
+	port := func(u *url.URL) string {
+		if u.Port() != "" {
+			return u.Port()
+		}
+		if u.Scheme == "https" {
+			return "443"
+		}
+		return "80"
+	}
+	return strings.EqualFold(x.Scheme, y.Scheme) && strings.EqualFold(x.Hostname(), y.Hostname()) && port(x) == port(y)
 }
 
 // Close releases the database after HTTP requests have drained.
@@ -112,7 +157,7 @@ func (s *Server) Handler() http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src "+s.cfg.PreviewOrigin+" "+s.cfg.SharePreviewOrigin+"; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
 		m.ServeHTTP(w, r)
 	})
 }

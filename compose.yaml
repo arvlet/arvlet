@@ -9,6 +9,9 @@ services:
       ARVLET_PASSWORD: ${ARVLET_PASSWORD:?Run node scripts/setup.mjs first}
       ARVLET_SESSION_SECRET: ${ARVLET_SESSION_SECRET:?Run node scripts/setup.mjs first}
       ARVLET_ORIGIN: ${ARVLET_ORIGIN:-http://localhost:3090}
+      ARVLET_PREVIEW_ORIGIN: ${ARVLET_PREVIEW_ORIGIN:-http://localhost:3092}
+      ARVLET_SHARE_ORIGIN: ${ARVLET_SHARE_ORIGIN:-http://localhost:3091}
+      ARVLET_SHARE_PREVIEW_ORIGIN: ${ARVLET_SHARE_PREVIEW_ORIGIN:-http://localhost:3092}
     volumes:
       - arvlet_data:/data
     read_only: true
@@ -29,6 +32,7 @@ services:
       - "${ARVLET_BIND:-127.0.0.1}:${ARVLET_HTTP_PORT:-3090}:80"
       - "${ARVLET_BIND:-127.0.0.1}:${ARVLET_HTTPS_PORT:-3443}:443"
       - "${ARVLET_SHARE_BIND:-127.0.0.1}:${ARVLET_SHARE_PORT:-3091}:8080"
+      - "${ARVLET_PREVIEW_BIND:-127.0.0.1}:${ARVLET_PREVIEW_PORT:-3092}:8081"
     environment:
       ARVLET_SITE: ${ARVLET_SITE:-http://localhost}
     volumes:

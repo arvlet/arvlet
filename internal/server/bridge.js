@@ -1,6 +1,7 @@
 (() => {
   // This value is JSON-encoded by Go. It identifies a preview, never an API key.
   const channel = __ARVLET_CHANNEL__;
+  const parentOrigin = __ARVLET_PARENT__;
   const pending = new Map();
   let nextID = 0;
 
@@ -8,6 +9,7 @@
     const message = event.data;
     if (
       event.source !== parent ||
+      event.origin !== parentOrigin ||
       !message ||
       message.channel !== channel ||
       message.type !== "arvlet:reply"
@@ -35,7 +37,7 @@
       pending.set(id, { resolve, reject, timer });
       parent.postMessage(
         { type: "arvlet:request", channel, id, op: operation, payload },
-        "*",
+        parentOrigin,
       );
     });
   }

@@ -94,7 +94,36 @@ Lists accept `limit` (1–200) and `offset`; results include `items` and `total`
 
 ## Interactive artifacts
 
-An HTML artifact is self-contained. Its scripts run in an opaque browser sandbox
+HTML previews use a dedicated origin, by default `http://localhost:3092`.
+Port 3090 hosts the workbench; port 3091 hosts standalone share pages; port 3092
+serves only render pages, on a separate Go HTTP listener without workspace APIs.
+The host requests a signed render URL valid for 15 minutes. Existing loaded apps
+continue working; reopening obtains a fresh URL. Revoking a share also invalidates
+its render tickets. Both sides validate the exact message origin, source window,
+and channel. The iframe retains sandbox restrictions with `allow-scripts allow-same-origin`;
+it no longer depends on an opaque `null` origin.
+
+For LAN shares, configure both public-facing origins (substitute your IP):
+
+```dotenv
+ARVLET_SHARE_ORIGIN=http://192.168.1.100:3091
+ARVLET_PREVIEW_ORIGIN=http://localhost:3092
+ARVLET_SHARE_PREVIEW_ORIGIN=http://192.168.1.100:3092
+ARVLET_PREVIEW_BIND=0.0.0.0
+ARVLET_PREVIEW_PORT=3092
+```
+
+Allow the preview port on the intended LAN as well as the share port. Embedded
+browsers with a site allowlist must permit the preview origin too. For HTTPS,
+set the preview origins to a separate HTTPS hostname and configure its Caddy site
+to proxy only to `app:8091`; never point that hostname to the workbench handler.
+Preview origins must differ from both workbench and share origins.
+Ports isolate DOM access, not cookies: keep session cookies HttpOnly and keep
+workspace endpoints off the preview listener. Preview apps share one renderer
+origin and its browser storage, so do not store secrets in localStorage there;
+use the artifact-scoped state bridge for persistence.
+
+An HTML artifact is self-contained. Its scripts run in an separate-origin browser sandbox
 without access to the parent document; CSP blocks fetch/XHR and external resources. The host provides:
 
 ```js

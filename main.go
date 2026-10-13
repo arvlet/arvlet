@@ -43,12 +43,15 @@ func main() {
 		os.Exit(1)
 	}
 	app, err := server.New(server.Config{
-		DBPath:        env("ARVLET_DB", "data/arvlet.db"),
-		APIKey:        os.Getenv("ARVLET_API_KEY"),
-		Password:      os.Getenv("ARVLET_PASSWORD"),
-		SessionSecret: os.Getenv("ARVLET_SESSION_SECRET"),
-		Origin:        env("ARVLET_ORIGIN", "http://localhost:3090"),
-		Assets:        http.FS(files),
+		DBPath:             env("ARVLET_DB", "data/arvlet.db"),
+		APIKey:             os.Getenv("ARVLET_API_KEY"),
+		Password:           os.Getenv("ARVLET_PASSWORD"),
+		SessionSecret:      os.Getenv("ARVLET_SESSION_SECRET"),
+		Origin:             env("ARVLET_ORIGIN", "http://localhost:3090"),
+		PreviewOrigin:      env("ARVLET_PREVIEW_ORIGIN", "http://localhost:3092"),
+		ShareOrigin:        env("ARVLET_SHARE_ORIGIN", "http://localhost:3091"),
+		SharePreviewOrigin: env("ARVLET_SHARE_PREVIEW_ORIGIN", "http://localhost:3092"),
+		Assets:             http.FS(files),
 	})
 	if err != nil {
 		slog.Error("startup failed", "error", err)
@@ -69,7 +72,18 @@ func main() {
 		MaxHeaderBytes:    16384,
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	previewSrv := &http.Server{
+		Addr: env("ARVLET_PREVIEW_ADDR", ":8091"), Handler: app.PreviewHandler(),
+		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second,
+		WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384,
+	}
 	defer stop()
+	go func() {
+		if err := previewSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("preview server failed", "error", err)
+			stop()
+		}
+	}()
 	drained := make(chan struct{})
 	go func() {
 		defer close(drained)
@@ -81,6 +95,9 @@ func main() {
 			if err := srv.Close(); err != nil {
 				slog.Error("force close HTTP server", "error", err)
 			}
+		}
+		if err := previewSrv.Shutdown(ctx); err != nil {
+			previewSrv.Close()
 		}
 	}()
 	slog.Info("Arvlet listening", "address", srv.Addr)

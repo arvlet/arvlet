@@ -49,10 +49,22 @@ func TestShareScopePersistenceAndRevocation(t *testing.T) {
 	requireStatus(t, request(s, "POST", "/api/v1/artifacts/"+a.ID+"/versions", `{"revision":1,"content":"new code"}`, ""), 201)
 	preview := public("GET", link.Path+"/preview?channel=abcdefghijklmnop", "")
 	requireStatus(t, preview, 200)
-	if !strings.Contains(preview.Body.String(), "Version one") {
+	var config struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(preview.Body.Bytes(), &config); err != nil {
+		t.Fatal(err)
+	}
+	rendered := httptest.NewRecorder()
+	s.PreviewHandler().ServeHTTP(rendered, httptest.NewRequest("GET", config.URL, nil))
+	requireStatus(t, rendered, 200)
+	if !strings.Contains(rendered.Body.String(), "Version one") {
 		t.Fatal("share should pin published code")
 	}
 	requireStatus(t, request(s, "DELETE", "/api/v1/artifacts/"+a.ID+"/shares", "", ""), 200)
+	rendered = httptest.NewRecorder()
+	s.PreviewHandler().ServeHTTP(rendered, httptest.NewRequest("GET", config.URL, nil))
+	requireStatus(t, rendered, 404)
 	requireStatus(t, public("GET", link.Path, ""), 404)
 	requireStatus(t, public("PUT", link.Path+"/state", `{"revision":1,"data":{}}`), 404)
 }
